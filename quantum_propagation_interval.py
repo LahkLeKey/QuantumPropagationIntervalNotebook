@@ -7,21 +7,23 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 # Constants
 c = 299_792_458  # Speed of light in m/s
 hertz_inverse_meter_relationship = 3.3356409519815204e-9  # Defined by NIST
-planck_constant = 6.62607015e-34  # Planck's constant in J*s
-frequency = c / 1e-6  # Example frequency (1 micron wavelength)
 G = 6.67430e-11  # Gravitational constant in m^3 kg^-1 s^-2
 M_earth = 5.972e24  # Mass of Earth in kg
 R_earth = 6.371e6  # Radius of Earth in meters
+M_sun = 1.989e30  # Mass of Sun in kg
+M_bh = 10 * M_sun  # Example black hole mass
+R_schwarzschild = 2 * G * M_bh / c**2  # Schwarzschild radius
 
 # Function to calculate quantum propagation interval
 def calculate_quantum_interval(mass):
-    E = (mass * c / 2) ** 2  # Energy term for propagation
-    entangled_value = 2 * np.sqrt(E)  # Intermediate entangled value
-    interval = entangled_value / (mass * c)  # Quantum propagation interval
+    E = (mass * c / 2) ** 2
+    entangled_value = 2 * np.sqrt(E)
+    interval = entangled_value / (mass * c)
     return E, entangled_value, interval
 
 # Function to apply relativistic Lorentz correction
@@ -31,26 +33,60 @@ def lorentz_correction(v):
 
 # Function to calculate gravitational redshift effect
 def gravitational_redshift(mass, distance):
+    if distance <= R_schwarzschild:
+        return np.nan
     potential = -G * mass / distance
     redshift = 1 / np.sqrt(1 + (2 * potential / c**2))
     return redshift
 
-# Sample masses, velocities, and distances for simulation
-masses = [1.0e20, 1.11112e25, 2.22223e25, 3.33334e25, 4.44445e25]
+# Black Hole Visualization in 3D
+
+def plot_black_hole_escape_3d():
+    fig = plt.figure(figsize=(12, 10))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Create the 3D funnel (black hole warp)
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, 1, 100)
+    u, v = np.meshgrid(u, v)
+    x = np.cos(u) * (1 - v**2)
+    y = np.sin(u) * (1 - v**2)
+    z = -v**2 * 2
+
+    ax.plot_surface(x, y, z, cmap='inferno', alpha=0.8)
+
+    # Create the 3D mirrored plane structure
+    net_x, net_y = np.meshgrid(np.linspace(-2, 2, 30), np.linspace(-2, 2, 30))
+    net_z = 0.1 * (net_x**2 - net_y**2)
+    ax.plot_wireframe(net_x, net_y, net_z, color='blue', alpha=0.5)
+
+    # Add escaping path to a mirrored 3D plane
+    escape_x = np.linspace(0, 2, 100)
+    escape_y = np.sin(escape_x * np.pi)
+    escape_z = np.linspace(-2, 1, 100)
+    mirrored_escape_z = -escape_z  # Mirrored plane
+    ax.plot(escape_x, escape_y, escape_z, color='green', linewidth=2, label="Escape Path")
+    ax.plot(escape_x, escape_y, mirrored_escape_z, color='purple', linewidth=2, linestyle='--', label="Mirrored Path")
+
+    # Add labels and title
+    ax.set_title("Black Hole Escape Visualization: 3D Funnel Escaping to Mirrored 3D Plane", fontsize=14)
+    ax.set_xlabel("X Axis")
+    ax.set_ylabel("Y Axis")
+    ax.set_zlabel("Z Axis")
+    ax.legend()
+
+    plt.show()
+
+# Simulation setup
+masses = [1.0e20, 1.11112e25, 2.22223e25, 3.33334e25, 4.44445e25, M_bh]
 velocities = [0.1 * c, 0.5 * c, 0.9 * c, 0.99 * c]
-distances = [R_earth, 2 * R_earth, 10 * R_earth]
+distances = [R_earth, 2 * R_earth, 10 * R_earth, R_schwarzschild, 2 * R_schwarzschild]
 
 # Simulation results
 mass_data = {
-    "Mass (kg)": [],
-    "Distance (m)": [],
-    "Velocity (m/s)": [],
-    "Quantum Interval (s)": [],
-    "Gravitational Redshift": [],
-    "Lorentz Factor": [],
-    "Energy (E = mc^2, J)": [],
-    "Known Meter-Hertz Relationship": [],
-    "Difference from Meter-Hertz Relationship": []
+    "Mass (kg)": [], "Distance (m)": [], "Velocity (m/s)": [], "Quantum Interval (s)": [],
+    "Gravitational Redshift": [], "Lorentz Factor": [], "Energy (E = mc^2, J)": [],
+    "Black Hole Escape Condition": []
 }
 
 for mass in masses:
@@ -59,8 +95,7 @@ for mass in masses:
             E, _, interval = calculate_quantum_interval(mass)
             gamma = lorentz_correction(velocity)
             redshift = gravitational_redshift(mass, distance)
-            difference = abs(interval - hertz_inverse_meter_relationship)
-
+            is_black_hole = distance <= R_schwarzschild
             mass_data["Mass (kg)"].append(mass)
             mass_data["Distance (m)"].append(distance)
             mass_data["Velocity (m/s)"].append(velocity)
@@ -68,45 +103,25 @@ for mass in masses:
             mass_data["Gravitational Redshift"].append(redshift)
             mass_data["Lorentz Factor"].append(gamma)
             mass_data["Energy (E = mc^2, J)"].append(E)
-            mass_data["Known Meter-Hertz Relationship"].append(hertz_inverse_meter_relationship)
-            mass_data["Difference from Meter-Hertz Relationship"].append(difference)
+            mass_data["Black Hole Escape Condition"].append(is_black_hole)
 
-# Convert results to a DataFrame
+# Convert results to DataFrame
 results_df = pd.DataFrame(mass_data)
 
-# Explanation of Quantum Propagation Interval
-explanation = """
-Quantum Propagation Interval
-
-The Quantum Propagation Interval is derived as a conceptual extension of mass-energy equivalence, aligning with 
-the NIST-defined Hertz-Inverse Meter Relationship. This interval builds on the universally recognized constant 
-c (speed of light) and explores its implications in wave-particle duality, relativistic effects, and gravitational interactions.
-
-Key Insight:
-Gravitational redshift inversely correlates with the quantum propagation interval. At higher distances from a 
-massive object, gravitational redshift diminishes while the quantum interval increases, reflecting opposite trends. 
-
-This relationship further grounds the quantum interval in Einstein's theoretical framework and provides a mechanism 
-for experimental validation through astrophysical and cosmological observations.
-"""
-
-# Combined and advanced plots
+# Combined and annotated plots
 def plot_combined_advanced_results():
     distances_plot = results_df["Distance (m)"].unique()
     velocities_plot = results_df["Velocity (m/s)"].unique()
-
     quantum_intervals = results_df.groupby("Distance (m)")["Quantum Interval (s)"].mean()
     redshifts = results_df.groupby("Distance (m)")["Gravitational Redshift"].mean()
-    lorentz_factors = results_df.groupby("Velocity (m/s)")["Lorentz Factor"].mean()
 
-    fig, axs = plt.subplots(2, 2, figsize=(15, 12))
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
-    # Quantum Interval vs Distance and Gravitational Redshift vs Distance (Dual Axis)
-    ax1 = axs[0, 0]
+    # Quantum Interval vs Distance and Gravitational Redshift
+    ax1 = axs[0]
     ax2 = ax1.twinx()
     ax1.plot(distances_plot, quantum_intervals, label="Quantum Interval", color="blue", marker="o")
     ax2.plot(distances_plot, redshifts, label="Gravitational Redshift", color="red", linestyle="--", marker="x")
-
     ax1.set_xlabel("Distance from Mass (m)")
     ax1.set_ylabel("Quantum Interval (s)", color="blue")
     ax2.set_ylabel("Gravitational Redshift Factor", color="red")
@@ -116,42 +131,18 @@ def plot_combined_advanced_results():
     ax1.grid()
 
     # Lorentz Factor vs Velocity
-    axs[0, 1].plot(velocities_plot, lorentz_factors, label="Lorentz Factor", color="green", marker="v")
-    axs[0, 1].set_xlabel("Velocity (m/s)")
-    axs[0, 1].set_ylabel("Lorentz Factor")
-    axs[0, 1].set_title("Lorentz Factor vs Velocity")
-    axs[0, 1].legend()
-    axs[0, 1].grid()
-
-    # Quantum Interval and Gravitational Redshift vs Mass
-    quantum_intervals_mass = results_df.groupby("Mass (kg)")["Quantum Interval (s)"].mean()
-    redshifts_mass = results_df.groupby("Mass (kg)")["Gravitational Redshift"].mean()
-    axs[1, 0].plot(masses, quantum_intervals_mass, label="Quantum Interval", color="blue", marker="o")
-    axs[1, 0].plot(masses, redshifts_mass, label="Gravitational Redshift", color="red", linestyle="--", marker="x")
-    axs[1, 0].set_xlabel("Mass (kg)")
-    axs[1, 0].set_ylabel("Value")
-    axs[1, 0].set_title("Quantum Interval and Gravitational Redshift vs Mass")
-    axs[1, 0].legend()
-    axs[1, 0].grid()
-
-    # Energy (E = mc^2) vs Mass
-    energies_mass = results_df.groupby("Mass (kg)")["Energy (E = mc^2, J)"].mean()
-    axs[1, 1].plot(masses, energies_mass, label="Energy (E = mc^2)", color="purple", marker="s")
-    axs[1, 1].set_xlabel("Mass (kg)")
-    axs[1, 1].set_ylabel("Energy (J)")
-    axs[1, 1].set_title("Energy vs Mass")
-    axs[1, 1].legend()
-    axs[1, 1].grid()
+    lorentz_factors = results_df.groupby("Velocity (m/s)")["Lorentz Factor"].mean()
+    ax3 = axs[1]
+    ax3.plot(velocities_plot, lorentz_factors, label="Lorentz Factor", color="green", marker="v")
+    ax3.set_xlabel("Velocity (m/s)")
+    ax3.set_ylabel("Lorentz Factor")
+    ax3.set_title("Lorentz Factor vs Velocity")
+    ax3.legend()
+    ax3.grid()
 
     plt.tight_layout()
     plt.show()
 
-# Display results and explanation
-def display_results_with_explanation():
-    print("Quantum Propagation Interval Results:")
-    print(results_df.head())
-    print("\n" + explanation)
-
-# Run the display function with explanation and plot advanced combined results
-display_results_with_explanation()
+# Run the plots
 plot_combined_advanced_results()
+plot_black_hole_escape_3d()
