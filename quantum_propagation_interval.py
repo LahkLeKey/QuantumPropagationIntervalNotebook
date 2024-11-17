@@ -78,9 +78,10 @@ def plot_black_hole_escape_3d():
     plt.show()
 
 # Simulation setup
-masses = [1.0e20, 1.11112e25, 2.22223e25, 3.33334e25, 4.44445e25, M_bh]
-velocities = [0.1 * c, 0.5 * c, 0.9 * c, 0.99 * c]
-distances = [R_earth, 2 * R_earth, 10 * R_earth, R_schwarzschild, 2 * R_schwarzschild]
+masses = [1.0e20, 1.11112e25, 2.22223e25, 3.33334e25, 4.44445e25, M_bh, 1.0e30, 5.0e30]  # Added new edge cases
+velocities = [0.1 * c, 0.5 * c, 0.9 * c, 0.99 * c, 0.999 * c]  # Extended velocity range
+
+distances = [R_earth, 2 * R_earth, 10 * R_earth, R_schwarzschild, 2 * R_schwarzschild, 0.5 * R_schwarzschild]  # Added close proximity edge case
 
 # Simulation results
 mass_data = {
