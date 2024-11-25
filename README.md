@@ -21,3 +21,8 @@ The script runs in the Python environment on **Kaggle.com**, which provides pre-
 Install these using:
 ```bash
 pip install numpy pandas matplotlib
+```
+
+![image](https://github.com/user-attachments/assets/a154181c-d9ea-46b9-a090-691e558ce593)
+![image](https://github.com/user-attachments/assets/67fb9b47-a491-49dd-8ec9-6075dae4a956)
+![image](https://github.com/user-attachments/assets/1bba4283-02d7-436d-a69a-9479a04ff579)
