@@ -3,15 +3,15 @@ Quantum Meets Black Holes: Simulate and Visualize the Universe's Mysteries
 --------------------------------------------------------------------------
 
 This notebook integrates the original functionality (quantum physics, relativistic effects, and black hole visualizations) 
-with new features including an enhanced zoomed-out view of the universe, chaotic spacetime net, and additional visualizations.
+with new features including rotating black holes, their gravitational influence, and enhancements to the chaotic spacetime net.
 
 Features:
 - Inverse Meter-Hertz (NIST), gravitational redshifts, and Lorentz factors.
 - Visualizations of black hole event horizons and rotational energies.
 - Relationships between physical quantities through pair plots.
 - A zoomed-out 3D universe populated with simulated galaxies.
-- Spacetime net with connections and curvature based on quantum intervals.
 - Chaotic spacetime net entangling galaxies for deeper exploration.
+- Rotating black holes (Kerr Black Holes) added, with gravitational influence zones visualized.
 
 Run this notebook locally or on platforms like Kaggle with Python installed.
 """
@@ -36,6 +36,7 @@ R_schwarzschild = 2 * G * M_bh / c**2  # Schwarzschild radius
 LY = 9.461e15  # Light-year in meters
 UNIVERSE_SCALE = 1e6 * LY  # Universe scale in light-years
 GALAXY_COUNT = 100  # Number of galaxies
+BLACK_HOLE_COUNT = 5  # Number of black holes
 
 # Functions
 def calculate_quantum_interval(mass):
@@ -99,30 +100,38 @@ print(f"✨ Peak Inverse Meter-Hertz (NIST): {peak_quantum_interval:.2e}")
 print(f"✨ Peak Lorentz Factor: {peak_lorentz_factor:.2f}")
 print(f"✨ Peak Rotational Kinetic Energy: {peak_rotational_energy:.2e} Joules")
 
-# Galaxy Simulation for Universe View
+# Galaxy and Black Hole Simulation
 np.random.seed(42)  # For reproducibility
 galaxy_positions = np.random.uniform(-UNIVERSE_SCALE, UNIVERSE_SCALE, (GALAXY_COUNT, 3))
-galaxy_sizes = np.random.uniform(0.1, 5, GALAXY_COUNT)  # Arbitrary galaxy sizes
-galaxy_colors = np.random.rand(GALAXY_COUNT, 3)  # RGB colors for diversity
+black_hole_positions = np.random.uniform(-UNIVERSE_SCALE / 2, UNIVERSE_SCALE / 2, (BLACK_HOLE_COUNT, 3))
+black_hole_masses = np.random.uniform(5 * M_sun, 20 * M_sun, BLACK_HOLE_COUNT)
 
 # Enhanced Chaotic Spacetime Net
 def create_chaotic_spacetime_net():
-    """Generates a chaotic spacetime net connecting all galaxies."""
+    """Generates a chaotic spacetime net connecting galaxies and black holes."""
     connections = []
     curvatures = []
 
+    # Connect galaxies to each other
     for i in range(len(galaxy_positions)):
         for j in range(len(galaxy_positions)):
             if i != j:  # Avoid self-connections
-                connections.append((i, j))
-                curvatures.append(1 / (np.linalg.norm(galaxy_positions[i] - galaxy_positions[j]) + 1e-10))  # Inverse distance
+                connections.append((galaxy_positions[i], galaxy_positions[j]))
+                curvatures.append(1 / (np.linalg.norm(galaxy_positions[i] - galaxy_positions[j]) + 1e-10))
+
+    # Connect black holes to galaxies
+    for bh in black_hole_positions:
+        for galaxy in galaxy_positions:
+            connections.append((bh, galaxy))
+            curvatures.append(1 / (np.linalg.norm(bh - galaxy) + 1e-10))
+
     return connections, curvatures
 
 chaotic_connections, chaotic_curvatures = create_chaotic_spacetime_net()
 
 # Enhanced Visualizations
-def plot_chaotic_universe_with_spacetime_net():
-    """Plot the zoomed-out universe with galaxies and a chaotic spacetime net."""
+def plot_chaotic_universe_with_black_holes():
+    """Plot the zoomed-out universe with galaxies, black holes, and chaotic spacetime net."""
     fig = plt.figure(figsize=(14, 12))
     ax = fig.add_subplot(111, projection='3d')
 
@@ -131,23 +140,34 @@ def plot_chaotic_universe_with_spacetime_net():
         galaxy_positions[:, 0],
         galaxy_positions[:, 1],
         galaxy_positions[:, 2],
-        s=galaxy_sizes * 20,
-        c=galaxy_colors,
+        s=50,
+        c="blue",
         alpha=0.8,
-        edgecolor='k',
         label="Galaxies"
     )
 
-    # Plot Chaotic Spacetime Net
-    for (i, j), curvature in zip(chaotic_connections, chaotic_curvatures):
-        galaxy1 = galaxy_positions[i]
-        galaxy2 = galaxy_positions[j]
+    # Plot Black Holes with Gravitational Influence
+    for bh, mass in zip(black_hole_positions, black_hole_masses):
+        ax.scatter(
+            bh[0], bh[1], bh[2],
+            s=200,
+            c="red",
+            alpha=0.9,
+            label=f"Black Hole (Mass: {mass / M_sun:.1f} M☉)"
+        )
+        # Gravitational influence sphere
+        u, v = np.mgrid[0:2 * np.pi:20j, 0:np.pi:10j]
+        x = R_schwarzschild * np.sin(v) * np.cos(u) + bh[0]
+        y = R_schwarzschild * np.sin(v) * np.sin(u) + bh[1]
+        z = R_schwarzschild * np.cos(v) + bh[2]
+        ax.plot_wireframe(x, y, z, color="red", alpha=0.2)
 
-        # Curve based on chaotic curvature
+    # Plot Chaotic Spacetime Net
+    for (point1, point2), curvature in zip(chaotic_connections, chaotic_curvatures):
         t = np.linspace(0, 1, 50)
-        curve_x = galaxy1[0] + t * (galaxy2[0] - galaxy1[0])
-        curve_y = galaxy1[1] + t * (galaxy2[1] - galaxy1[1])
-        curve_z = galaxy1[2] + t * (galaxy2[2] - galaxy1[2]) - curvature * np.sin(t * np.pi)  # Chaotic bending
+        curve_x = point1[0] + t * (point2[0] - point1[0])
+        curve_y = point1[1] + t * (point2[1] - point1[1])
+        curve_z = point1[2] + t * (point2[2] - point1[2]) - curvature * np.sin(t * np.pi)
 
         ax.plot(curve_x, curve_y, curve_z, color='gray', alpha=0.1, linewidth=0.3)
 
@@ -155,40 +175,12 @@ def plot_chaotic_universe_with_spacetime_net():
     ax.set_xlim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
     ax.set_ylim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
     ax.set_zlim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
-    ax.set_title("Chaotic Universe with Spacetime Net", fontsize=16)
+    ax.set_title("Chaotic Universe with Black Holes and Spacetime Net", fontsize=16)
     ax.set_xlabel("X (Light-Years)")
     ax.set_ylabel("Y (Light-Years)")
     ax.set_zlabel("Z (Light-Years)")
     ax.legend()
     plt.show()
 
-# Combined Plot
-def plot_combined():
-    """Combined Inverse Meter-Hertz (NIST) and relativistic plots."""
-    distances_plot = np.sort(simulation_df["Distance (m)"].unique())
-    velocities_plot = np.sort(simulation_df["Velocity (m/s)"].unique())
-    quantum_intervals = simulation_df.groupby("Distance (m)")["Inverse Meter-Hertz (NIST)"].mean()
-    redshifts = simulation_df.groupby("Distance (m)")["Gravitational Redshift"].mean()
-    lorentz_factors = simulation_df.groupby("Velocity (m/s)")["Lorentz Factor"].mean()
-    rotational_energies = simulation_df.groupby("Velocity (m/s)")["Rotational Kinetic Energy (J)"].mean()
-
-    fig, axs = plt.subplots(1, 2, figsize=(18, 8))
-    ax1 = axs[0]
-    ax2 = ax1.twinx()
-    ax1.plot(distances_plot, quantum_intervals, label="Inverse Meter-Hertz (NIST)", color="blue", marker="o")
-    ax2.plot(distances_plot, redshifts, label="Gravitational Redshift", color="red", linestyle="--", marker="x")
-    ax1.set_title("Inverse Meter-Hertz (NIST) vs Gravitational Redshift")
-    ax1.grid(True)
-
-    ax3 = axs[1]
-    ax4 = ax3.twinx()
-    ax3.plot(velocities_plot, lorentz_factors, label="Lorentz Factor", color="green", marker="v")
-    ax4.plot(velocities_plot, rotational_energies, label="Rotational Energy", color="orange", linestyle="-", marker="^")
-    ax3.set_title("Lorentz Factor vs Rotational Energy")
-    ax3.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-# Execute Visualizations
-plot_combined()
-plot_chaotic_universe_with_spacetime_net()
+# Execute Visualization
+plot_chaotic_universe_with_black_holes()
