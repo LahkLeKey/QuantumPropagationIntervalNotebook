@@ -3,15 +3,17 @@ Quantum Meets Black Holes: Simulate and Visualize the Universe's Mysteries
 --------------------------------------------------------------------------
 
 This notebook integrates the original functionality (quantum physics, relativistic effects, and black hole visualizations) 
-with new features including rotating black holes, their gravitational influence, and enhancements to the chaotic spacetime net.
+with new features including an enhanced zoomed-out view of the universe, chaotic spacetime net, and additional visualizations.
 
 Features:
 - Inverse Meter-Hertz (NIST), gravitational redshifts, and Lorentz factors.
 - Visualizations of black hole event horizons and rotational energies.
 - Relationships between physical quantities through pair plots.
 - A zoomed-out 3D universe populated with simulated galaxies.
+- Spacetime net with connections and curvature based on quantum intervals.
 - Chaotic spacetime net entangling galaxies for deeper exploration.
-- Rotating black holes (Kerr Black Holes) added, with gravitational influence zones visualized.
+- Dynamic relativistic spacetime plane and Kerr black hole visualization.
+- Interaction intensity heatmap.
 
 Run this notebook locally or on platforms like Kaggle with Python installed.
 """
@@ -20,6 +22,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.interpolate import griddata
 import seaborn as sns
 import warnings
 
@@ -106,32 +109,22 @@ galaxy_positions = np.random.uniform(-UNIVERSE_SCALE, UNIVERSE_SCALE, (GALAXY_CO
 black_hole_positions = np.random.uniform(-UNIVERSE_SCALE / 2, UNIVERSE_SCALE / 2, (BLACK_HOLE_COUNT, 3))
 black_hole_masses = np.random.uniform(5 * M_sun, 20 * M_sun, BLACK_HOLE_COUNT)
 
-# Enhanced Chaotic Spacetime Net
-def create_chaotic_spacetime_net():
-    """Generates a chaotic spacetime net connecting galaxies and black holes."""
-    connections = []
-    curvatures = []
+# Create Relativistic Spacetime Surface
+def create_smooth_spacetime_surface():
+    """Generates a smooth relativistic spacetime surface."""
+    grid_x, grid_y = np.meshgrid(
+        np.linspace(-UNIVERSE_SCALE, UNIVERSE_SCALE, 100),
+        np.linspace(-UNIVERSE_SCALE, UNIVERSE_SCALE, 100)
+    )
+    points = galaxy_positions[:, :2]
+    values = galaxy_positions[:, 2] / UNIVERSE_SCALE  # Normalize Z-values
+    grid_z = griddata(points, values, (grid_x, grid_y), method='linear')
+    return grid_x, grid_y, grid_z
 
-    # Connect galaxies to each other
-    for i in range(len(galaxy_positions)):
-        for j in range(len(galaxy_positions)):
-            if i != j:  # Avoid self-connections
-                connections.append((galaxy_positions[i], galaxy_positions[j]))
-                curvatures.append(1 / (np.linalg.norm(galaxy_positions[i] - galaxy_positions[j]) + 1e-10))
+# Plot Smooth Surface with Black Holes
+def plot_smooth_universe():
+    grid_x, grid_y, grid_z = create_smooth_spacetime_surface()
 
-    # Connect black holes to galaxies
-    for bh in black_hole_positions:
-        for galaxy in galaxy_positions:
-            connections.append((bh, galaxy))
-            curvatures.append(1 / (np.linalg.norm(bh - galaxy) + 1e-10))
-
-    return connections, curvatures
-
-chaotic_connections, chaotic_curvatures = create_chaotic_spacetime_net()
-
-# Enhanced Visualizations
-def plot_chaotic_universe_with_black_holes():
-    """Plot the zoomed-out universe with galaxies, black holes, and chaotic spacetime net."""
     fig = plt.figure(figsize=(14, 12))
     ax = fig.add_subplot(111, projection='3d')
 
@@ -140,47 +133,36 @@ def plot_chaotic_universe_with_black_holes():
         galaxy_positions[:, 0],
         galaxy_positions[:, 1],
         galaxy_positions[:, 2],
-        s=50,
-        c="blue",
-        alpha=0.8,
-        label="Galaxies"
+        s=40,
+        c='blue',
+        label="Galaxies",
+        alpha=0.7
     )
 
-    # Plot Black Holes with Gravitational Influence
+    # Plot Black Holes
     for bh, mass in zip(black_hole_positions, black_hole_masses):
         ax.scatter(
             bh[0], bh[1], bh[2],
-            s=200,
+            s=100,
             c="red",
-            alpha=0.9,
-            label=f"Black Hole (Mass: {mass / M_sun:.1f} M☉)"
+            label=f"Black Hole (Mass: {mass / M_sun:.1f} M☉)",
+            alpha=0.9
         )
-        # Gravitational influence sphere
-        u, v = np.mgrid[0:2 * np.pi:20j, 0:np.pi:10j]
-        x = R_schwarzschild * np.sin(v) * np.cos(u) + bh[0]
-        y = R_schwarzschild * np.sin(v) * np.sin(u) + bh[1]
-        z = R_schwarzschild * np.cos(v) + bh[2]
-        ax.plot_wireframe(x, y, z, color="red", alpha=0.2)
 
-    # Plot Chaotic Spacetime Net
-    for (point1, point2), curvature in zip(chaotic_connections, chaotic_curvatures):
-        t = np.linspace(0, 1, 50)
-        curve_x = point1[0] + t * (point2[0] - point1[0])
-        curve_y = point1[1] + t * (point2[1] - point1[1])
-        curve_z = point1[2] + t * (point2[2] - point1[2]) - curvature * np.sin(t * np.pi)
+    # Smooth Spacetime Surface
+    ax.plot_surface(
+        grid_x, grid_y, grid_z,
+        cmap="plasma",
+        alpha=0.5,
+        edgecolor='none'
+    )
 
-        ax.plot(curve_x, curve_y, curve_z, color='gray', alpha=0.1, linewidth=0.3)
-
-    # Set Axis Labels and Limits
-    ax.set_xlim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
-    ax.set_ylim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
-    ax.set_zlim(-UNIVERSE_SCALE, UNIVERSE_SCALE)
-    ax.set_title("Chaotic Universe with Black Holes and Spacetime Net", fontsize=16)
+    ax.set_title("Black Hole Heatmap?", fontsize=16)
     ax.set_xlabel("X (Light-Years)")
     ax.set_ylabel("Y (Light-Years)")
-    ax.set_zlabel("Z (Light-Years)")
-    ax.legend()
+    ax.set_zlabel("Z (Normalized)")
+    plt.legend()
     plt.show()
 
-# Execute Visualization
-plot_chaotic_universe_with_black_holes()
+# Execute Plot
+plot_smooth_universe()
